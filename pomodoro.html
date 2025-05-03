@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro | Odaklan Lan!</title>
+    <style>
+        :root {
+            --bg-main: #121212;
+            --bg-card: #1E1E1E;
+            --text-primary: #E0E0E0;
+            --text-secondary: #AAAAAA;
+            --accent: #FF8C00;
+            --button-secondary: #555555;
+            --danger: #B00020;
+            --danger-hover: #D50000;
+            --progress-bg: #444444;
+            --progress-fill: var(--accent);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color-scheme: dark;
+        }
+
+        body {
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        button {
+            padding: 0.8em 1.5em;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 500;
+            font-family: inherit;
+            color: white;
+            background-color: var(--button-secondary);
+            cursor: pointer;
+            transition: opacity 0.2s ease-out;
+        }
+        button:hover { opacity: 0.85; }
+        button:disabled { background-color: #444 !important; cursor: not-allowed; opacity: 0.5; }
+
+        input[type="number"] {
+            padding: 0.8rem;
+            border: 1px solid var(--button-secondary);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            max-width: 450px;
+            width: 100%;
+            padding: 1.5rem;
+            position: relative;
+            text-align: center;
+        }
+
+        .top-buttons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        .top-buttons button {
+            background: none;
+            font-size: 1.6rem;
+            color: var(--text-secondary);
+            padding: 5px;
+        }
+        .top-buttons button:hover { color: var(--accent); opacity: 1; }
+
+        .timer-display-container {
+            background-color: var(--bg-card);
+            border-radius: 50%;
+            width: 280px;
+            height: 280px;
+            margin: 1.5rem auto 1rem auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0 0 10px rgba(0,0,0,0.15);
+            padding: 1rem;
+            position: relative;
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            z-index: 1;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.3s linear;
+            stroke-width: 8px;
+            fill: transparent;
+        }
+        .progress-ring__background {
+            stroke: var(--progress-bg);
+        }
+        .progress-ring__progress {
+            stroke: var(--progress-fill);
+            stroke-linecap: round;
+        }
+
+
+        #phase-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        #timer-text {
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 0;
+            font-variant-numeric: tabular-nums;
+            position: relative;
+            z-index: 2;
+        }
+
+        .timer-button-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        .timer-button-container button {
+            min-width: 110px;
+        }
+        #start-pause-button {
+             background-color: var(--accent);
+        }
+         #start-pause-button:disabled {
+             background-color: #444 !important;
+         }
+
+        .cycle-info {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .modal-backdrop { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 1rem; }
+        .modal-content { background-color: var(--bg-card); padding: 1.5rem 2rem; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); max-width: 450px; width: 100%; z-index: 1001; display: flex; flex-direction: column; max-height: 85vh; }
+        .modal-content h2 { color: var(--accent); margin-top: 0; margin-bottom: 1.5rem; text-align: center; font-weight: 600; }
+        .modal-body { overflow-y: auto; margin-bottom: 1.5rem; padding-right: 0.5rem; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; }
+        .modal-actions { margin-top: auto; padding-top: 1rem; border-top: 1px solid #444; display: flex; justify-content: flex-end; gap: 0.8rem; }
+        .modal-actions .left-actions { margin-right: auto; display: flex; gap: 0.8rem; }
+        #clear-history-button { background-color: var(--danger); }
+        #clear-history-button:hover { background-color: var(--danger-hover); opacity: 1; }
+        .history-list { list-style: none; padding: 0; margin: 0; }
+        .history-list li { background-color: var(--bg-main); padding: 0.7rem 1rem; margin-bottom: 0.6rem; border-radius: 4px; font-size: 0.9rem; border-left: 4px solid var(--accent); color: var(--text-secondary); }
+        .history-list li.no-history { background-color: transparent; border-left: none; text-align: center; padding: 1rem; color: var(--text-secondary); }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1>Arda'nın Orospusu</h1>
+        <div class="top-buttons">
+            <button id="settings-button" title="Ayarlar">⚙️</button>
+            <button id="history-button" title="Geçmiş">📜</button>
+        </div>
+
+        <div class="timer-display-container">
+             <svg class="progress-ring" viewBox="0 0 120 120">
+                 <circle class="progress-ring__background" r="54" cx="60" cy="60" />
+                 <circle id="progress-circle" class="progress-ring__progress" r="54" cx="60" cy="60" />
+             </svg>
+            <p id="phase-text">Çalışma</p>
+            <p id="timer-text">25:00</p>
+        </div>
+
+        <div class="timer-button-container">
+            <button id="start-pause-button">BAŞLAT</button>
+            <button id="reset-button">SIFIRLA</button>
+        </div>
+
+        <p class="cycle-info">Tamamlanan Döngü: <span id="cycle-count">0</span></p>
+    </div>
+
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <h2>Ayarlar</h2>
+            <div class="modal-body">
+                <form id="settings-form">
+                    <div class="form-group">
+                        <label for="workMinutes">Çalışma Süresi (dk):</label>
+                        <input type="number" id="workMinutes" name="workMinutes" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shortBreakMinutes">Kısa Mola (dk):</label>
+                        <input type="number" id="shortBreakMinutes" name="shortBreakMinutes" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="longBreakMinutes">Uzun Mola (dk):</label>
+                        <input type="number" id="longBreakMinutes" name="longBreakMinutes" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cyclesBeforeLongBreak">Uzun Mola Döngüsü:</label>
+                        <input type="number" id="cyclesBeforeLongBreak" name="cyclesBeforeLongBreak" min="1" required>
+                    </div>
+                </form>
+             </div>
+             <div class="modal-actions">
+                 <div class="left-actions">
+                    <button id="reset-defaults-button" type="button">Varsayılana Dön</button>
+                 </div>
+                <button id="save-settings-button" type="submit" form="settings-form" style="background-color: var(--accent);">Kaydet</button>
+                <button id="close-settings-button" type="button">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <h2>Geçmiş Pomodoro'lar</h2>
+            <div class="modal-body">
+                <ul id="history-list" class="history-list"></ul>
+            </div>
+            <div class="modal-actions">
+                 <div class="left-actions">
+                     <button id="clear-history-button" type="button">Geçmişi Temizle</button>
+                 </div>
+                <button id="close-history-button" type="button">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const phaseTextEl = document.getElementById('phase-text');
+        const timerTextEl = document.getElementById('timer-text');
+        const cycleCountEl = document.getElementById('cycle-count');
+        const startPauseButton = document.getElementById('start-pause-button');
+        const resetButton = document.getElementById('reset-button');
+        const settingsButton = document.getElementById('settings-button');
+        const historyButton = document.getElementById('history-button');
+        const settingsModal = document.getElementById('settings-modal');
+        const historyModal = document.getElementById('history-modal');
+        const closeSettingsButton = document.getElementById('close-settings-button');
+        const closeHistoryButton = document.getElementById('close-history-button');
+        const saveSettingsButton = document.getElementById('save-settings-button');
+        const resetDefaultsButton = document.getElementById('reset-defaults-button');
+        const clearHistoryButton = document.getElementById('clear-history-button');
+        const historyListEl = document.getElementById('history-list');
+        const settingsForm = document.getElementById('settings-form');
+        const workMinutesInput = document.getElementById('workMinutes');
+        const shortBreakInput = document.getElementById('shortBreakMinutes');
+        const longBreakInput = document.getElementById('longBreakMinutes');
+        const cyclesInput = document.getElementById('cyclesBeforeLongBreak');
+        const progressCircle = document.getElementById('progress-circle');
+        const radius = progressCircle.r.baseVal.value;
+        const circumference = 2 * Math.PI * radius;
+
+        const PHASES = { WORK: 'Çalışma', SHORT_BREAK: 'Kısa Mola', LONG_BREAK: 'Uzun Mola' };
+        const SETTINGS_KEY = 'pomodoroSettings_student_v2';
+        const HISTORY_KEY = 'pomodoroHistory_student_v2';
+        const DEFAULT_SETTINGS = { workMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, cyclesBeforeLongBreak: 4 };
+        const STATIC_TITLE_PART = "| Odaklan!";
+
+        let settings = {};
+        let history = [];
+        let currentPhase = PHASES.WORK;
+        let timeLeft = 0;
+        let initialTime = 0;
+        let isActive = false;
+        let cycleCount = 0;
+        let intervalId = null;
+
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+
+        function getStorage(key, defaultValue) {
+            const stored = localStorage.getItem(key);
+            return stored ? JSON.parse(stored) : defaultValue;
+        }
+
+        function setStorage(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100) * circumference;
+            progressCircle.style.strokeDashoffset = Math.max(0, offset);
+        }
+
+
+        function updateDisplay() {
+            const formattedTime = formatTime(timeLeft);
+            timerTextEl.textContent = formattedTime;
+            phaseTextEl.textContent = currentPhase;
+            cycleCountEl.textContent = cycleCount;
+            startPauseButton.textContent = isActive ? 'DURAKLAT' : 'BAŞLAT';
+            startPauseButton.disabled = timeLeft <= 0 && !isActive;
+            document.title = `${formattedTime} - ${currentPhase} ${STATIC_TITLE_PART}`;
+            startPauseButton.style.backgroundColor = isActive ? 'var(--button-secondary)' : 'var(--accent)';
+            const percentElapsed = initialTime > 0 ? ((initialTime - timeLeft) / initialTime) * 100 : 0;
+            setProgress(percentElapsed);
+        }
+
+        function switchPhase(newPhase) {
+            currentPhase = newPhase;
+            switch(newPhase) {
+                case PHASES.WORK: initialTime = settings.workMinutes * 60; break;
+                case PHASES.SHORT_BREAK: initialTime = settings.shortBreakMinutes * 60; break;
+                case PHASES.LONG_BREAK: initialTime = settings.longBreakMinutes * 60; break;
+                default: initialTime = settings.workMinutes * 60;
+            }
+            timeLeft = initialTime;
+            updateDisplay();
+            setProgress(0);
+        }
+
+        function stopTimer() {
+            clearInterval(intervalId);
+            intervalId = null;
+            isActive = false;
+            updateDisplay();
+        }
+
+        function startTimer() {
+            if (isActive || timeLeft <= 0) return;
+            if (initialTime === 0 || timeLeft === initialTime) {
+                 switch(currentPhase) {
+                    case PHASES.WORK: initialTime = settings.workMinutes * 60; break;
+                    case PHASES.SHORT_BREAK: initialTime = settings.shortBreakMinutes * 60; break;
+                    case PHASES.LONG_BREAK: initialTime = settings.longBreakMinutes * 60; break;
+                }
+                 timeLeft = initialTime;
+                 setProgress(0);
+            }
+
+            isActive = true;
+            updateDisplay();
+
+            intervalId = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) {
+                    stopTimer();
+                    document.title = `Bitti! - ${currentPhase} ${STATIC_TITLE_PART}`;
+                    let nextPhase = PHASES.WORK;
+                    if (currentPhase === PHASES.WORK) {
+                        cycleCount++;
+                        history = [ { id: Date.now(), date: new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short'}), type: currentPhase, duration: settings.workMinutes }, ...history ];
+                        setStorage(HISTORY_KEY, history);
+                        renderHistoryList();
+                        nextPhase = cycleCount % settings.cyclesBeforeLongBreak === 0 ? PHASES.LONG_BREAK : PHASES.SHORT_BREAK;
+                    }
+                    switchPhase(nextPhase);
+                }
+            }, 1000);
+        }
+
+        function resetCurrentPhaseTimer() {
+            stopTimer();
+            switchPhase(currentPhase);
+        }
+
+        function renderHistoryList() {
+            historyListEl.innerHTML = '';
+            if (history.length === 0) {
+                historyListEl.innerHTML = '<li class="no-history">Henüz kayıt yok.</li>';
+                clearHistoryButton.style.display = 'none';
+            } else {
+                history.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = `${item.date} - ${item.type} (${item.duration} dk)`;
+                    historyListEl.appendChild(li);
+                });
+                clearHistoryButton.style.display = 'inline-block';
+            }
+        }
+
+        function loadAndApplySettings() {
+            settings = { ...DEFAULT_SETTINGS, ...getStorage(SETTINGS_KEY, DEFAULT_SETTINGS) };
+            history = getStorage(HISTORY_KEY, []);
+            cycleCount = 0;
+            stopTimer();
+            switchPhase(PHASES.WORK);
+            renderHistoryList();
+            setProgress(0);
+        }
+
+        function showModal(modalEl) { modalEl.style.display = 'flex'; }
+        function hideModal(modalEl) { modalEl.style.display = 'none'; }
+
+        startPauseButton.onclick = () => { isActive ? stopTimer() : startTimer(); };
+        resetButton.onclick = resetCurrentPhaseTimer;
+
+        settingsButton.onclick = () => {
+            workMinutesInput.value = settings.workMinutes;
+            shortBreakInput.value = settings.shortBreakMinutes;
+            longBreakInput.value = settings.longBreakMinutes;
+            cyclesInput.value = settings.cyclesBeforeLongBreak;
+            showModal(settingsModal);
+        };
+
+        historyButton.onclick = () => {
+            renderHistoryList();
+            showModal(historyModal);
+        };
+
+        closeSettingsButton.onclick = () => hideModal(settingsModal);
+        closeHistoryButton.onclick = () => hideModal(historyModal);
+        settingsModal.onclick = (e) => { if (e.target === settingsModal) hideModal(settingsModal); };
+        historyModal.onclick = (e) => { if (e.target === historyModal) hideModal(historyModal); };
+
+        settingsForm.onsubmit = (e) => {
+            e.preventDefault();
+            settings = {
+                workMinutes: Math.max(1, parseInt(workMinutesInput.value, 10)),
+                shortBreakMinutes: Math.max(1, parseInt(shortBreakInput.value, 10)),
+                longBreakMinutes: Math.max(1, parseInt(longBreakInput.value, 10)),
+                cyclesBeforeLongBreak: Math.max(1, parseInt(cyclesInput.value, 10)),
+            };
+            setStorage(SETTINGS_KEY, settings);
+            hideModal(settingsModal);
+            loadAndApplySettings();
+        };
+
+        resetDefaultsButton.onclick = () => {
+            workMinutesInput.value = DEFAULT_SETTINGS.workMinutes;
+            shortBreakInput.value = DEFAULT_SETTINGS.shortBreakMinutes;
+            longBreakInput.value = DEFAULT_SETTINGS.longBreakMinutes;
+            cyclesInput.value = DEFAULT_SETTINGS.cyclesBeforeLongBreak;
+        };
+
+        clearHistoryButton.onclick = () => {
+            if (confirm('Geçmişi silmek istediğinizden emin misiniz?')) {
+                history = [];
+                setStorage(HISTORY_KEY, history);
+                renderHistoryList();
+            }
+        };
+
+        loadAndApplySettings();
+
+    </script>
+</body>
+</html>
